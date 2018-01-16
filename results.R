@@ -24,5 +24,5 @@ par(mfrow=c(1,2))
 hist(tpp_first_false_selection, col = "gold2",
      xlab = "TPP at time of first false selection", main="")
 hist(fdp_last_true_selection, col = "gold2",
-     xlab = "TPP at time of first false selection", main="")
+     xlab = "FDP at time of last true selection", main="")
 dev.off()
