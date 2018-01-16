@@ -1,63 +1,75 @@
 library(glmnet)
 
 
-TPP <- function(model, beta, k) {
+TPP <- function(model, beta) {
   # True positive proportion
+  true_coefs <- which(beta > 0)
+  k <- length(true_coefs)
   coefs <- coef.glmnet(model)@i
-  common_coefs <- intersect(which(beta > 0), coefs)
+  common_coefs <- intersect(true_coefs, coefs)
   length(common_coefs)/max(k, 1)
 }
 
-FDP <- function(model, beta, k) {
+FDP <- function(model, beta) {
   # False discoveries proportion
+  true_coefs <- which(beta > 0)
+  k <- length(true_coefs)
+  
   coefs <- coef.glmnet(model)@i
   not_common_coefs <- intersect(which(beta == 0), coefs)
   length(not_common_coefs)/max(length(coefs), 1)
 }
 
-TPP_FDP <- function(lambda, X, y, k, beta) {
+TPP_FDP <- function(lambda, X, y, beta) {
   # (TPP, FDP)
   # lambda = 0, tous les coefficients sont sélectionnés
+  true_coefs <- which(beta > 0)
+  k <- length(true_coefs)
+  
   model <- glmnet(X, y, lambda = lambda)
-  TPP <- TPP(model, beta, k)
-  FDP <- FDP(model, beta, k)
+  TPP <- TPP(model, beta)
+  FDP <- FDP(model, beta)
   c(TPP, FDP)
 }
 
-first_false_selection <- function(k, beta) {
+first_false_selection <- function(n, p, beta) {
   # When the first false selection happens
   # Generate data under same gaussian random design setting
-  X = matrix( rnorm(1010 * 1000), nrow=1010, ncol=1000)
+  X = matrix( rnorm(n * p), nrow=n, ncol=p)
   y = X%*%beta
+  true_coefs <- which(beta > 0)
+  k <- length(true_coefs)
   
   lambda <- 20
-  tpp_fdp <- TPP_FDP(lambda, X, y, k, beta)
+  tpp_fdp <- TPP_FDP(lambda, X, y, beta)
   tpp <- tpp_fdp[1]
   fdp <- tpp_fdp[2]
   i <- 1
   while (fdp == 0) {
     lambda <- lambda - 0.5
-    tpp_fdp <- TPP_FDP(lambda, X, y, k, beta)
+    tpp_fdp <- TPP_FDP(lambda, X, y, beta)
     tpp <- tpp_fdp[1]
     fdp <- tpp_fdp[2]
   }
   c(tpp, fdp, lambda)
 }
 
-last_true_selection <- function(k, beta) {
+last_true_selection <- function(n, p, beta) {
   # When the last true selection happens
   # Generate data under same gaussian random design setting
-  X = matrix( rnorm(1010 * 1000), nrow=1010, ncol=1000)
+  X = matrix( rnorm(n * p), nrow=n, ncol=p)
   y = X%*%beta
+  true_coefs <- which(beta > 0)
+  k <- length(true_coefs)
   
   lambda <- 0.1
-  tpp_fdp <- TPP_FDP(lambda, X, y, k, beta)
+  tpp_fdp <- TPP_FDP(lambda, X, y, beta)
   tpp <- tpp_fdp[1]
   fdp <- tpp_fdp[2]
   i <- 1
   while (tpp == 1) {
     lambda <- lambda + 0.5
-    tpp_fdp <- TPP_FDP(lambda, X, y, k, beta)
+    tpp_fdp <- TPP_FDP(lambda, X, y, beta)
     tpp <- tpp_fdp[1]
     fdp <- tpp_fdp[2]
   }
