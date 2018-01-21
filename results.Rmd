@@ -1,0 +1,66 @@
+---
+title: "FDR_lasso"
+author: "Mathieu Guglielmino"
+date: "21/01/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+source('TPP_FDP.R')
+source('sharpness.R')
+```
+
+## Lasso path
+
+We generate data under a random gaussian design, with $n = 1010$ and $p = 1000$. We chose $\beta$ such that $ \beta_1 = \cdots = \beta_200 = 4$ and $\beta_201 = \cdots = \beta_800 = 0$.
+
+```{r data_generation}
+beta = c(rep(4, 200), rep(0, 800))
+
+X = matrix( rnorm(1010 * 1000), nrow=1010, ncol=1000)
+y = X%*%beta
+```
+
+We plot the lasso path for 500 values of $\lambda$, for $\lambda$ varying between 0.1 and 10.
+
+```{r lasso_path}
+lasso_path <- t(sapply(seq(0.1, 10, length.out = 500), function(x) TPP_FDP(x, X, y, beta) ))
+plot(lasso_path,
+     xlab = 'TPP', ylab = 'FDP', main = 'Lasso path', cex=0.5, col="deepskyblue3")
+```
+### Comments
+How to chose the values of $\lambda$ ?
+
+## TPP at time of first false selection and FDP at time of last true selection
+We generate 100 datasets under the previous conditions for which we would like to know the frequency of both : 
++ The TPP at time of first false selection
++ The FDP at time of last true selection
+
+Let's recall that for $\lambda = 0$, we are under the least squares estimate framework, hence every variables will be selected. Under this condition the TPP will equal one, and we increase $\lambda$ to figure the
+
+```{r tpp_fdp_histogram}
+# Histogram of the TPP at time of first false selection
+tpp_first_false_selection <- sapply(1:100, function(x) first_false_selection(1010, 1000, beta)[1])
+# Histogram of the FDP at time of last true selection
+fdp_last_true_selection <- sapply(1:100, function(x) last_true_selection(1010, 1000, beta)[2])
+
+par(mfrow=c(1,2))
+hist(tpp_first_false_selection, col = "gold2",
+     xlab = "TPP at time of first false selection", main="")
+hist(fdp_last_true_selection, col = "gold2",
+     xlab = "FDP at time of last true selection", main="")
+
+```
+
+On left, the TPP when the first false variable enters the lasso. Right, the FDP when the TPP reaches one.
+
+## Sharpness
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
