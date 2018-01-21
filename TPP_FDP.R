@@ -40,18 +40,19 @@ first_false_selection <- function(n, p, beta) {
   true_coefs <- which(beta > 0)
   k <- length(true_coefs)
   
-  lambda <- 20
+  lambda <- 70
   tpp_fdp <- TPP_FDP(lambda, X, y, beta)
   tpp <- tpp_fdp[1]
   fdp <- tpp_fdp[2]
-  i <- 1
+  
   while (fdp == 0) {
-    lambda <- lambda - 0.5
+    lambda <- lambda - 1
     tpp_fdp <- TPP_FDP(lambda, X, y, beta)
     tpp <- tpp_fdp[1]
     fdp <- tpp_fdp[2]
   }
-  c(tpp, fdp, lambda)
+  # Rank of the first false discovery
+  c(tpp = tpp, fdp = fdp, lambda = lambda, rank_fdp = 1 + floor(k*tpp))
 }
 
 last_true_selection <- function(n, p, beta) {
@@ -72,6 +73,7 @@ last_true_selection <- function(n, p, beta) {
     tpp_fdp <- TPP_FDP(lambda, X, y, beta)
     tpp <- tpp_fdp[1]
     fdp <- tpp_fdp[2]
+    i <- i + 1
   }
-  c(tpp, fdp, lambda)
+  c(tpp = tpp, fdp = fdp, lambda = lambda)
 }

@@ -5,20 +5,20 @@ beta_prior <- function(M1, M2, n, eps, eps_prime) {
 }
 
 # Generate an averaged plot of the lasso path
-multiple_paths <- function(N, n, p, eps = 0.2, eps_prime) {
+multiple_paths <- function(N, n, p, eps = 0.2, eps_prime = 0.3) {
   # N : number of paths to average
   # n, p : dimensions
   # eps : percentage of non null coefficients
   # eps_prime : percentage of strong signals
-  
   paths <- NULL
+  
   for (i in seq(1, N)) {
     # Data generation
     X = matrix( rnorm(n * p), nrow=n, ncol=p)
+    # Compute multiple paths for varying eps_prime
     beta <- beta_prior(50, 0.1, n, eps, eps_prime)
-    y = X%*%beta_1
-
-    path <- t(sapply(seq(0, 0.3, length.out = 100), function(x) TPP_FDP(x, X, y, beta_1) ))
+    y = X%*%beta
+    path <- t(sapply(seq(0, 0.3, length.out = 100), function(x) TPP_FDP(x, X, y, beta) ))
     paths <- rbind(paths, path)
   }
   paths

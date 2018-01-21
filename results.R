@@ -30,29 +30,33 @@ hist(fdp_last_true_selection, col = "gold2",
      xlab = "FDP at time of last true selection", main="")
 dev.off()
 
-# Sharpness for the proportion of strong signals
+## Sharpness for the proportion of strong signals
 eps_prime = c(0.3, 0.5, 0.7, 0.9)
-avg_paths = NULL
 
 t <- proc.time()
 for (e_prime in eps_prime) {
   # Data generation for variying eps_prime (proportion of strong signals)
-  X = matrix( rnorm(1000 * 1000), nrow=1000, ncol=1000)
-  beta_1 <- beta_prior(50, 0.1, 1000, 0.2, e_prime)
-  y = X%*%beta_1
-  
   # Generate 100 paths for the current value of e_prime and average them
-  paths <- multiple_paths(100, 1000, 1000, 0.2, e_prime)
+  paths <- multiple_paths(100, 1000, 1000, 0.2, eps_prime = e_prime)
   paths <- data.frame(tpp = paths[,1], fdp = paths[,2])
-  avg_paths <- cbind(avg_paths, averaged_path(paths))
+  if (e_prime == 0.3) avg_paths <- averaged_path(paths)
+  else avg_paths <- cbind(avg_paths, averaged_path(paths))
 }
 t <- proc.time() - t
 
 
-lasso_path <- t(sapply(seq(0, 0.5, length.out = 200), function(x) TPP_FDP(x, X, y, beta_1) ))
-plot(lasso_path,
-     xlab = 'TPP', ylab = 'FDP', main = 'Lasso path', cex=0.5, col="deepskyblue3")
+## Rank of first false discovery with sparsity
 
-# estimation ols
-# lambda pour tpp = 1
-# penalty.factor glmnet avec les beta d'ols
+rank_fdp <- c(0)
+t <- proc.time()
+for (k in seq(10, 150, 5)) {
+  print(k)
+  # Data generation for variying sparsity (nb of non null coefficients)
+  # Generate 100 paths for the current value of k and average them
+  # NOTE : WE CHOOSE TO START AT LAMBDA = 70 AND DECREASE BY ONE AT EACH STEP
+  
+  beta = c(rep(50, k), rep(0, p - k))
+  avg_rank <- mean(t(sapply(1:100, function(x) first_false_selection(1000, 1000, beta)['rank_fdp'])))
+  rank_fdp <- cbind(rank_fdp, avg_rank)
+}
+t <- proc.time() - t
