@@ -15,7 +15,8 @@ fdrlasso <- function(tpp,delta,epsi)
    
   if(tpp > powermax(delta,epsi))
   {
-    stop("Invalid input !")
+    #stop("Invalid input !")
+    return(1)
   }
   
   if(tpp == 0)
