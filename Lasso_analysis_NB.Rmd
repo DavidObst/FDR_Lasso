@@ -1,0 +1,466 @@
+---
+title: 'False discoveries occur early on the Lasso path: an analysis'
+output:
+  html_document:
+    df_print: paged
+---
+
+This markdown contains the code which has been used to reproduce the simulations presented in paper. Feel free to play around with the parameters. Many of the simulations may require several minutes to run. One reduce the required time by lowering the number of independent repetitions (generally named $N$ or $n_{reps}$) to make execution quicker (however thus yielding less nice plots).
+
+## Required packages
+
+- **R version >=3.3**
+- **glmnet** (for Lasso estimation)
+- **repr** (to resize R plots in the notebook)
+- **latex2exp** (for aethetic reasons)
+
+```{r,echo=FALSE,message=FALSE}
+## %%% Loading the packages and files which are needed %%% ##
+
+library(glmnet)
+library(repr)
+library(actuar)
+library(dplyr)
+library(magrittr)
+library(latex2exp)
+
+source("FDP_TPP.R")
+source("rsandwich.R")
+source("lsandwich.R")
+source("epsilonDT.R")
+source("powermax.R")
+source("fdrlasso.R")
+source("plot_qstar.R")
+source("utility_functions.R")
+source("sharpness.R")
+```
+
+## Plots of the Lasso path and boundary curve
+
+Use the function **plot_qstar** to plot the theoretical boundary curve $(u,q^*(u))$ or to add it to an existing plot.
+
+```{r echo=FALSE,fig.align='center'}
+delta = 0.3
+epsilon = 0.15
+
+#options(repr.plot.width=4, repr.plot.height=3)
+plot_qstar(delta,epsilon,mode='full',main='FDP / TPP plot')
+```
+
+The 4 frontier plots from the paper have been reproduced to the identical.
+
+```{r echo=FALSE}
+colors = c("blue","red","forestgreen")
+par(mfcol=c(2,2), mai = c(0.8, 0.8, 0.3, 0.4),mgp=c(1.8,0.5,0))
+
+# %%%%%%% Fig. 4 top left %%%%%%%%% #
+delta = 1
+list_eps = c(0.1,0.2,0.4)
+
+for(i in 1:length(list_eps))
+{
+  plot_qstar(delta,list_eps[i],col=colors[i],ylim=c(0,0.4),main=TeX(paste("$\\delta = $",delta)),add=(i!=1))  
+}
+
+legend(x="topleft",legend=TeX(paste('$\\epsilon =$',list_eps,"\t")),lty=1,lwd=2,col=colors,cex=0.95)
+
+# %%%%%%% Fig. 4 bottom left %%%%%%%%% #
+delta = 0.1
+list_eps = c(0.03,0.05,0.07)
+
+for(i in 1:length(list_eps))
+{
+  plot_qstar(delta,list_eps[i],col=colors[i],ylim=c(0,0.9),main=TeX(paste("$\\delta = $",delta)),add=(i!=1))  
+}
+
+legend(x="bottomright",legend=TeX(paste('$\\epsilon =$',list_eps,"\t")),lty=1,lwd=2,col=colors,cex=0.95)
+
+# %%%%%%% Fig. 4 top right %%%%%%%%% #
+colors = c("forestgreen","red","blue")
+list_delta = c(0.4,0.8,1)
+eps = 0.2
+
+for(i in 1:length(list_delta))
+{
+  plot_qstar(list_delta[i],eps,col=colors[i],ylim=c(0,0.8),main=TeX(paste("$\\epsilon = $",eps)),add=(i!=1))  
+}
+
+legend(x="topleft",legend=TeX(paste('$\\delta =$',list_delta,"\t")),lty=1,lwd=2,col=colors,cex=0.95)
+
+# %%%%%%% Fig. 4 bottom right %%%%%%%%% #
+colors = c("forestgreen","red","blue")
+list_delta = c(0.05,0.1,0.25)
+eps = 0.05
+
+for(i in 1:length(list_delta))
+{
+  plot_qstar(list_delta[i],eps,col=colors[i],ylim=c(0,0.9),main=TeX(paste("$\\epsilon = $",eps)),add=(i!=1))  
+}
+
+#text(0,0,TeX("$\\epsilon = 0.05$"))
+legend(x="topright",legend=TeX(paste('$\\delta =$',list_delta,"\t")),lty=1,lwd=2,col=colors,cex=0.95)
+
+```
+
+
+```{r echo=FALSE,fig.align='center'}
+colors = c("forestgreen","red","deepskyblue3","black","darkgoldenrod1")
+delta = 1
+list_eps = c(0.2,0.3,0.5,0.6,0.7)
+
+for(i in 1:length(list_eps))
+{
+  plot_qstar(delta,list_eps[i],col=colors[i],ylim=c(0,0.5),main=TeX(paste("$\\delta = $",delta)),add=(i!=1))  
+}
+
+legend(x="topright",legend=TeX(paste('$\\epsilon =$',list_eps,"\t")),lty=1,lwd=2,col=colors,cex=0.95)
+
+```
+
+A single realization of the Lasso path is plotted hereafter, in the noiseless case. The boundary curve is added for comparison.
+
+```{r echo=FALSE,fig.align='center'}
+n = 1010
+p = 1000
+k = 200
+eps = k/p
+delta = n/p
+M = 4
+
+X = replicate(p,rnorm(n,0,1))
+beta = beta_prior(M1=M,M2=0,p=p,eps=eps,eps_prime=1)
+y = X%*%beta
+
+lasso_path <- t(sapply(seq(0.1, 50, length.out = 1000), function(x) TPP_FDP(x, X, y, beta) ))
+
+plot(lasso_path,xlab = 'TPP', ylab = 'FDP', main = 'Lasso path', cex=0.5, col="deepskyblue3",ylim=c(0,0.25))
+plot_qstar(delta,eps,add2=TRUE)
+```
+## TPP at time of first false selection and FDP at time of last true selection
+
+We reproduce the histograms giving the time of first false selection and of last true one. In those plots it is obvious that, as the title indicates, false discoveries tend to happen early.
+
+```{r echo=FALSE}
+beta = c(rep(4, 200), rep(0, 800))
+
+X = matrix( rnorm(1010 * 1000), nrow=1010, ncol=1000)
+y = X%*%beta
+k = 200
+
+
+# Histogram of the TPP at time of first false selection
+tpp_first_false_selection <- replicate(100,first_false_selection(1010,1000,beta))
+fdp_last_true_selection <- replicate(100,last_true_selection(1010,1000,beta))
+  
+#png('hist_tpp_first_false_fdp_last_true.png', width=900, height=500)
+par(mfrow=c(1,2))
+hist(tpp_first_false_selection[1,], col = "gold2",
+     xlab = "TPP at time of first false selection", main="",breaks=15)
+hist(fdp_last_true_selection[2,], col = "gold2",
+     xlab = "FDP at time of last true selection", main="",breaks=15)
+
+```
+
+## Sharpness
+
+As presented in the paper, for a prior $\Pi$ given by ... the expected Lasso path will touch the frontier exactly once on the point of TPP value $\epsilon '$. This can be seen on the figure hereafter.
+
+```{r echo=FALSE}
+N = 50 ##Number of independent realizations: has been put to 50 because else it's too long...
+
+n = 1000
+p = 1000
+delta = n/p
+k = 200
+eps = k/p
+M = 10
+
+eps_prime = 0.5
+#list_lambda = seq(8e-5,2e-2,length.out=50)
+#list_lambda =  c(seq(4e-4,9e-4,length.out = 20),seq(1,9,by=0.2) %o% 10^((-3):(-2)),seq(0.1,0.3,length.out=20))
+list_lambda = c(seq(3e-5,9e-5,length.out=20),seq(1,9,by=0.1) %o% 10^((-4):(-2)))
+
+beta = beta_prior(M1=M,M2=1/M,n,eps,eps_prime)
+test_paths = multiple_paths(N, n, p, list_lambda,,eps = eps, eps_prime = eps_prime) 
+test_averaged <- averaged_path(test_paths,n_sep=40)
+
+plot(test_paths[,1],test_paths[,2],cex=0.5, col="deepskyblue3",ylim=c(0,0.3),
+     xlab="TPP",ylab="FDP",main=TeX(sprintf("$\\epsilon$ = %.2f , $\\delta$ = %.2f ",eps,delta ) ))
+#plot(test_paths[,,1],test_paths[,,2],cex=0.5, col="deepskyblue3",ylim=c(0,0.3))
+plot_qstar(delta,eps,add2=TRUE)
+lines(test_averaged$tpp_bins,test_averaged$fdp,col="red",lwd=2,lty=2)
+#lines(test_averaged[,1],test_averaged[,2],type="l",lty=2,col="red",lwd=2)
+points(eps_prime,fdrlasso(eps_prime,delta,eps),pch=18,cex=2,col="purple")
+legend(x="topleft",legend=c("Path on repeated simu.","Averaged path","Contact point"),
+    col=c("deepskyblue3","red","purple"),lty=c(1,2,NA),pch=c(NA,NA,18))
+
+```
+
+Another illustration of the sharpness is given hereafter.
+
+```{r echo=FALSE}
+n = 700
+p = 2300
+delta = n/p
+k = 300
+eps = k/p
+M = 10
+
+eps_prime = 0.3
+list_lambda = seq(1e-2,0.2,length.out=300)
+list_lambda = c(seq(3e-5,9e-5,length.out=20),seq(1,9,by=0.2) %o% 10^((-4):(-2)))
+
+X = replicate(p,rnorm(n,0,1/n))
+
+beta = beta_prior(M1=M,M2=1/M,p,eps,eps_prime)
+test_paths2 = multiple_paths(N, n, p, list_lambda,,eps = eps, eps_prime = eps_prime) 
+test_averaged <- averaged_path(test_paths2,n_sep=85)
+
+plot(test_paths2[,1],test_paths2[,2],cex=0.5, col="deepskyblue3",ylim=c(0,0.6),
+     xlab="TPP",ylab="FDP",main=TeX(sprintf("$\\epsilon$ = %.2f , $\\delta$ = %.2f ",eps,delta ) ))
+#plot(test_paths[,,1],test_paths[,,2],cex=0.5, col="deepskyblue3",ylim=c(0,0.3))
+plot_qstar(delta,eps,add2=TRUE)
+lines(test_averaged$tpp_bins,test_averaged$fdp,col="red",lwd=2,lty=2)
+#lines(test_averaged[,1],test_averaged[,2],type="l",lty=2,col="red",lwd=2)
+points(eps_prime,fdrlasso(eps_prime,delta,eps),pch=18,cex=2,col="purple")
+legend(x="topleft",legend=c("Path on repeated simu.","Averaged path","Contact point"),
+    col=c("deepskyblue3","red","purple"),lty=c(NA,2,NA),pch=c(1,NA,18))
+
+```
+
+## Unachievable region
+
+According to the paper, for certain pairs $(\delta,\epsilon)$ it is theoretically impossible to go beyond a certain TPP. However this is not what happens experimentally, and illustrates a gap between theory and practice.
+
+```{r echo=FALSE}
+n = 700
+p = 2300
+k = 300
+eps = k/p
+delta = n/p
+M = 4
+
+n_reps =5
+
+X = replicate(p,rnorm(n,0,1/n))
+plot_qstar(delta,eps,main=TeX(sprintf("$\\delta$ = %.2f , $\\epsilon$ = %.2f",delta,eps)))
+list_lambda = c(seq(1,9,by=0.3) %o% 10^((-7):(-1)))
+
+for(i in 1:n_reps)
+{
+  beta = beta_prior(M1=M,M2=0,eps=eps,p=p,eps_prime=1)
+  y = X%*%beta
+  lasso_pathB <- t(sapply(list_lambda, function(x) TPP_FDP(x, X, y, beta) ))
+  points(lasso_pathB[,1],lasso_pathB[,2],pch=19, cex=0.5, col="deepskyblue3")
+
+}
+
+
+
+```
+
+
+## Rank of the first false discovery with sparsity
+
+These simulations have been performed using another paper W. Su wrote shortly after.
+
+```{r echo=FALSE}
+p = 1000
+n = 1010
+
+beta = c(rep(4, 200), rep(0, 800))
+
+X = matrix( rnorm(1010 * 1000), nrow=1010, ncol=1000)
+y = X%*%beta
+k = 200
+
+
+rank_fdp <- c(0)
+for (k in seq(10, 150, 5)) {
+  print(k)
+  # Data generation for variying sparsity (nb of non null coefficients)
+  # Generate 100 paths for the current value of k and average them
+  # NOTE : WE CHOOSE TO START AT LAMBDA = 70 AND DECREASE BY ONE AT EACH STEP
+  
+  beta = c(rep(50, k), rep(0, p - k))
+  avg_rank <- mean(t(sapply(1:100, function(x) first_false_selection(1000, 1000, beta)['rank_fdp'])))
+  rank_fdp <- cbind(rank_fdp, avg_rank)
+}
+
+plot(c(0,seq(10,150,5)),rank_fdp[1,],type="b",cex=0.8,col="deepskyblue3",ylim=c(0,75),
+     xlab="Sparsity",ylab="Rank of 1st false discovery")
+X0 = n/(2*log(p))
+
+xx = seq(X0,150,length.out = 100)
+curve = exp(sqrt(2*n*log(p)/xx) - 0.5*n/xx + log(n/(2*p*log(p))))
+segments(0,0,X0,X0,col="red")
+segments(X0,-1,X0,X0,lty=2,col="gold")
+lines(xx,curve)
+```
+
+## Shrinkage noise
+
+### Situation where optimization and statistics concur
+
+```{r echo=FALSE}
+n = 1000
+p = 1000
+
+lambda = 3e-4
+list_eps = seq(0.01,1,length.out = 80)
+n_reps = 30
+
+simu = lapply(list_eps,function(eps) {replicate(n_reps,shrinkage_noise(lambda,gen_beta(eps,p,M=4),replicate(p,rnorm(n,0,1/n))))})
+
+plot_noise(simu,n,p,n_reps,main=TeX(sprintf("$\\lambda = %.1e $",lambda)))
+```
+
+
+### Situation where they disagree
+
+```{r echo=FALSE}
+n = 700
+p = 2300
+n_reps = 30
+
+lambda = 3e-4
+list_eps = seq(0.01,1,length.out = 80)
+n_reps = 30
+
+simu2 = lapply(list_eps,function(eps) {replicate(n_reps,shrinkage_noise(lambda,gen_beta(eps,p,M=4),replicate(p,rnorm(n,0,1/n))))})
+
+plot_noise(simu2,n,p,n_reps,main=TeX(sprintf("$\\lambda = %.1e $",lambda)))
+```
+
+## Adaptive Lasso and its ability to recover the true support
+
+### For $\delta \approx 1$
+
+We consider a number of samples / features ratio $\delta$ not too far from 1. This means the problem is "easy", and as seen in the plot below the adaptive lasso with weights derivating from ordinary least-squares (OLS) estimation is able to perfectly recover the support.
+
+
+```{r echo=FALSE}
+n = 1000
+p = 1100
+
+delta = n/p
+eps = 0.2
+
+beta = gen_beta(eps=eps,p,M=4)
+X = replicate(p,rnorm(n,0,1/n))
+list_lambda = seq(1e-4,0.5,length.out = 400)
+lasso_path_adap <- t(sapply(list_lambda, function(lambda) adaptive_FDP_TPP(lambda, X,beta) ))
+
+plot(lasso_path_adap,xlab = 'TPP', ylab = 'FDP',main=TeX(sprintf("$\\delta$ = %.2f , $\\epsilon$ = %.2f",delta,eps)),
+     cex=0.5, col="deepskyblue3",xlim=c(0,1),ylim=c(0,1))
+plot_qstar(delta,eps,add2=TRUE)
+
+```
+
+As one can see the weights of the spurious variables are much higher than the ones of the right coefficients (there are even extreme outliers which have been removed for visibility purposes).
+
+```{r echo=FALSE,fig.align='center'}
+n = 1000
+p = 1100
+eps = 0.2
+delta = n/p
+beta = gen_beta(eps=eps,p,M=4)
+X = replicate(p,rnorm(n,0,1/n))
+y = X%*%beta
+#beta_LM = solve(t(XX)%*%XX)%*%t(XX)%*%y
+beta_LM <- as.numeric(glmnet(X,y,alpha=0,lambda=0)$beta)
+weights = 1/abs(beta_LM)
+par(mfrow=c(1,2))
+boxplot(weights[beta>0],main=TeX("$w_j$ distribution of $T$"))
+boxplot(weights[beta==0],main=TeX("$w_j$ distribution of $\\bar{T}$"),outline=FALSE)
+```
+
+### For $\delta \ll 1$
+
+However for a difficult situation where the number of features largely exceeds the available number of samples, adaptive Lasso performs even worse than the traditional one.
+
+
+```{r echo=FALSE}
+n = 700
+p = 2300
+
+delta = n/p
+eps = 0.13
+
+beta = gen_beta(eps=eps,p,M=4)
+X = replicate(p,rnorm(n,0,1/n))
+list_lambda = seq(1e-5,1,length.out = 700)
+lasso_path_adap2 <- t(sapply(list_lambda, function(lambda) adaptive_FDP_TPP(lambda, X,beta) ))
+
+plot(lasso_path_adap2,xlab = 'TPP', ylab = 'FDP',main=TeX(sprintf("$\\delta$ = %.2f , $\\epsilon$ = %.2f",delta,eps)), cex=0.5, col="deepskyblue3",xlim=c(0,1),ylim=c(0,1))
+plot_qstar(delta,eps,add2=TRUE)
+
+```
+
+As one can see, this time the distribution is much more even: this is the reason why the adaptive Lasso fails too.
+
+```{r echo=FALSE,fig.align='center'}
+beta = gen_beta(eps=eps,p,M=4)
+X = replicate(p,rnorm(n,0,1/n))
+y = X%*%beta
+beta_LM <- as.numeric(glmnet(X,y,alpha=0,lambda=0)$beta)
+weights = 1/abs(beta_LM)
+par(mfrow=c(1,2))
+boxplot(weights[beta>0],main=TeX("$w_j$ distribution of $T$"),outline=FALSE)
+boxplot(weights[beta==0],main=TeX("$w_j$ distribution of $\\bar{T}$"),outline=FALSE)
+```
+
+# Numerical simulations which where set aside when writing
+
+## FDP / TPP plot in the (theoretical) infinite variance situation 
+
+The theorem 1 requires a distribution $\Pi$ with finite second moment. In order to see what happens in the scenario of infinite variance, we sample the coefficients $\beta_j$ from a Pareto distribution $\text{Pareto}(\alpha,1)$ with $\alpha \in ]1,2[$. Theoretically it has a finite mean but infinite variance, and indeed the (TPP,FDP) pairs deviate from the boundary when $TPP \rightarrow 1$. The more $\alpha \rightarrow 1$, the more it diverges.
+However in practice the variance of the coefficients to estimate will always be finite ; furthermore even for $\alpha \approx 1.5$ we do not see much deviation from the finite case. This hypothesis is therefore (at least practically) not of paramount importance.
+
+
+```{r echo=FALSE}
+## / !!! \ WARNING 
+## Maybe slow to execute: n and p need to be high enough (high dimensional situation)
+n_rep = 7
+n = 1.5*1e3
+p = 1.5*1e3
+k = p/5
+M = 4
+delta = n/p
+eps = k/p
+X <- replicate(p,rnorm(n,0,1))
+beta = gen_beta(eps,p,M)
+
+alpha <- 1.1
+
+list_lambda = c(seq(1,9,by=0.55) %o% 10^((-4):0))
+n_rep = 7
+
+TPP_FDP_arr = array(0,dim=c(length(list_lambda),2,n_rep))
+plot_qstar(delta,eps,main=TeX(paste("$\\alpha$ =",alpha)))
+
+for(n in 1:n_rep)
+{
+  beta <- rep(0,p)
+  indices = sample(1:p,k)
+  
+  beta[indices] = rpareto(k,shape=alpha,scale=1)
+  
+  y = X%*%beta
+  
+  fdp_tpp_s = t(sapply(list_lambda, function(x) TPP_FDP(x, X, y, beta) ))
+  points(fdp_tpp_s[,1],fdp_tpp_s[,2],pch=19,col="cornflowerblue")
+  
+  TPP_FDP_arr[,,n] = fdp_tpp_s
+  
+}
+
+```
+
+```{r echo=FALSE}
+## /! \ WARNING : 
+## To free memory this cell DELETES the previous X (>= 100 Mb)
+rm(X)
+```
+
+## 
