@@ -1,8 +1,3 @@
-source("rsandwich.R")
-source("lsandwich.R")
-source("epsilonDT.R")
-source("powermax.R")
-source("fdrlasso.R")
 
 plot_qstar <- function(delta,epsilon,mode="empty",col="blue",ylim=c(0,1),main=NULL,add=FALSE,add2=FALSE)
 {
