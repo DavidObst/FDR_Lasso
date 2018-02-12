@@ -7,7 +7,7 @@ output:
 
 This markdown contains the code which has been used to reproduce the simulations presented in paper. Feel free to play around with the parameters. Many of the simulations may require several minutes to run. One reduce the required time by lowering the number of independent repetitions (generally named $N$ or $n_{reps}$) to make execution quicker (however thus yielding less nice plots).
 
-## Required packages
+## Required R version and packages
 
 - **R version >=3.3**
 - **glmnet** (for Lasso estimation)
@@ -26,15 +26,15 @@ library(dplyr)
 library(magrittr)
 library(latex2exp)
 
-source("FDP_TPP.R")
-source("rsandwich.R")
-source("lsandwich.R")
-source("epsilonDT.R")
-source("powermax.R")
-source("fdrlasso.R")
-source("plot_qstar.R")
-source("utility_functions.R")
-source("sharpness.R")
+source("FDR_Lasso-master/FDP_TPP.R")
+source("FDR_Lasso-master/rsandwich.R")
+source("FDR_Lasso-master/lsandwich.R")
+source("FDR_Lasso-master/epsilonDT.R")
+source("FDR_Lasso-master/powermax.R")
+source("FDR_Lasso-master/fdrlasso.R")
+source("FDR_Lasso-master/plot_qstar.R")
+source("FDR_Lasso-master/utility_functions.R")
+source("FDR_Lasso-master/sharpness.R")
 ```
 
 ## Plots of the Lasso path and boundary curve
@@ -304,7 +304,7 @@ lines(xx,curve)
 
 ### Situation where optimization and statistics concur
 
-```{r echo=FALSE}
+```{r echo=FALSE,fig.align='center'}
 n = 1000
 p = 1000
 
@@ -320,7 +320,7 @@ plot_noise(simu,n,p,n_reps,main=TeX(sprintf("$\\lambda = %.1e $",lambda)))
 
 ### Situation where they disagree
 
-```{r echo=FALSE}
+```{r echo=FALSE,fig.align='center'}
 n = 700
 p = 2300
 n_reps = 30
@@ -341,7 +341,7 @@ plot_noise(simu2,n,p,n_reps,main=TeX(sprintf("$\\lambda = %.1e $",lambda)))
 We consider a number of samples / features ratio $\delta$ not too far from 1. This means the problem is "easy", and as seen in the plot below the adaptive lasso with weights derivating from ordinary least-squares (OLS) estimation is able to perfectly recover the support.
 
 
-```{r echo=FALSE}
+```{r echo=FALSE,fig.align='center'}
 n = 1000
 p = 1100
 
@@ -464,5 +464,3 @@ for(n in 1:n_rep)
 ## To free memory this cell DELETES the previous X (>= 100 Mb)
 rm(X)
 ```
-
-## 
