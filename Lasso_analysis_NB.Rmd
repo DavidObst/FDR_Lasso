@@ -11,14 +11,16 @@ This markdown contains the code which has been used to reproduce the simulations
 
 - **R version >=3.3**
 - **glmnet** (for Lasso estimation)
-- **repr** (to resize R plots in the notebook)
 - **latex2exp** (for aethetic reasons)
+- **dplyr**
+- **magrittr**
+- **actuar**
 
 ```{r,echo=FALSE,message=FALSE}
 ## %%% Loading the packages and files which are needed %%% ##
 
 library(glmnet)
-library(repr)
+#library(repr)
 library(actuar)
 library(dplyr)
 library(magrittr)
@@ -49,7 +51,7 @@ plot_qstar(delta,epsilon,mode='full',main='FDP / TPP plot')
 
 The 4 frontier plots from the paper have been reproduced to the identical.
 
-```{r echo=FALSE}
+```{r echo=FALSE,fig.align='center'}
 colors = c("blue","red","forestgreen")
 par(mfcol=c(2,2), mai = c(0.8, 0.8, 0.3, 0.4),mgp=c(1.8,0.5,0))
 
@@ -140,7 +142,7 @@ plot_qstar(delta,eps,add2=TRUE)
 
 We reproduce the histograms giving the time of first false selection and of last true one. In those plots it is obvious that, as the title indicates, false discoveries tend to happen early.
 
-```{r echo=FALSE}
+```{r echo=FALSE,fig.align='center'}
 beta = c(rep(4, 200), rep(0, 800))
 
 X = matrix( rnorm(1010 * 1000), nrow=1010, ncol=1000)
@@ -165,7 +167,7 @@ hist(fdp_last_true_selection[2,], col = "gold2",
 
 As presented in the paper, for a prior $\Pi$ given by ... the expected Lasso path will touch the frontier exactly once on the point of TPP value $\epsilon '$. This can be seen on the figure hereafter.
 
-```{r echo=FALSE}
+```{r echo=FALSE,fig.align='center'}
 N = 50 ##Number of independent realizations: has been put to 50 because else it's too long...
 
 n = 1000
@@ -198,7 +200,7 @@ legend(x="topleft",legend=c("Path on repeated simu.","Averaged path","Contact po
 
 Another illustration of the sharpness is given hereafter.
 
-```{r echo=FALSE}
+```{r echo=FALSE,fig.align='center'}
 n = 700
 p = 2300
 delta = n/p
@@ -232,7 +234,7 @@ legend(x="topleft",legend=c("Path on repeated simu.","Averaged path","Contact po
 
 According to the paper, for certain pairs $(\delta,\epsilon)$ it is theoretically impossible to go beyond a certain TPP. However this is not what happens experimentally, and illustrates a gap between theory and practice.
 
-```{r echo=FALSE}
+```{r echo=FALSE,fig.align='center'}
 n = 700
 p = 2300
 k = 300
@@ -264,7 +266,7 @@ for(i in 1:n_reps)
 
 These simulations have been performed using another paper W. Su wrote shortly after.
 
-```{r echo=FALSE}
+```{r echo=FALSE,fig.align='center'}
 p = 1000
 n = 1010
 
@@ -380,7 +382,7 @@ boxplot(weights[beta==0],main=TeX("$w_j$ distribution of $\\bar{T}$"),outline=FA
 However for a difficult situation where the number of features largely exceeds the available number of samples, adaptive Lasso performs even worse than the traditional one.
 
 
-```{r echo=FALSE}
+```{r echo=FALSE,fig.align='center'}
 n = 700
 p = 2300
 
@@ -418,7 +420,7 @@ The theorem 1 requires a distribution $\Pi$ with finite second moment. In order 
 However in practice the variance of the coefficients to estimate will always be finite ; furthermore even for $\alpha \approx 1.5$ we do not see much deviation from the finite case. This hypothesis is therefore (at least practically) not of paramount importance.
 
 
-```{r echo=FALSE}
+```{r echo=FALSE,fig.align='center'}
 ## / !!! \ WARNING 
 ## Maybe slow to execute: n and p need to be high enough (high dimensional situation)
 n_rep = 7
